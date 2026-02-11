@@ -1,5 +1,5 @@
 // Página de estadísticas avanzadas con datos del historial
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import MainLayout from '@/components/MainLayout';
 import PageHeader from '@/components/PageHeader';
 import { useRealtimeData } from '@/hooks/useRealtimeData';
@@ -18,7 +18,8 @@ import {
   Banknote,
   Bus,
   FileText,
-  Download
+  Download,
+  Filter
 } from 'lucide-react';
 import {
   Select,
@@ -64,7 +65,16 @@ const EstadisticasPage: React.FC = () => {
 
   const { toast } = useToast();
   const [selectedBus, setSelectedBus] = useState<string>('all');
+  const [selectedMonth, setSelectedMonth] = useState<string>('current');
   const [generatingReport, setGeneratingReport] = useState(false);
+
+  // Obtener mes actual en formato YYYY-MM
+  const getCurrentMonth = (): string => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+  };
 
   // Función para obtener el nombre del mes
   const getMonthName = (dateString: string): string => {
@@ -72,14 +82,55 @@ const EstadisticasPage: React.FC = () => {
     return `${MONTHS[parseInt(month) - 1]} ${year}`;
   };
 
-  // Filtrar historial por bus
-  const filteredHistorial = React.useMemo(() => {
-    if (selectedBus === 'all') return historial;
-    return historial.filter(h => h.numeroBus === selectedBus);
-  }, [historial, selectedBus]);
+  // Obtener meses disponibles del historial
+  const mesesDisponibles = useMemo(() => {
+    const meses = new Set<string>();
+    historial.forEach(h => {
+      if (h.fechaSalida) {
+        const yearMonth = h.fechaSalida.substring(0, 7);
+        meses.add(yearMonth);
+      }
+    });
+    return Array.from(meses)
+      .sort((a, b) => b.localeCompare(a)) // Ordenar de más reciente a más antiguo
+      .map(mes => ({
+        value: mes,
+        label: getMonthName(mes)
+      }));
+  }, [historial]);
+
+  // Obtener el mes seleccionado (actual o el especificado)
+  const mesActual = useMemo(() => {
+    if (selectedMonth === 'current') {
+      return getCurrentMonth();
+    }
+    return selectedMonth;
+  }, [selectedMonth]);
+
+  // Filtrar historial por mes Y bus
+  const filteredHistorial = useMemo(() => {
+    let filtered = historial;
+
+    // Filtrar por mes
+    if (selectedMonth !== 'all') {
+      const targetMonth = selectedMonth === 'current' ? getCurrentMonth() : selectedMonth;
+      filtered = filtered.filter(h => {
+        if (!h.fechaSalida) return false;
+        const yearMonth = h.fechaSalida.substring(0, 7);
+        return yearMonth === targetMonth;
+      });
+    }
+
+    // Filtrar por bus
+    if (selectedBus !== 'all') {
+      filtered = filtered.filter(h => h.numeroBus === selectedBus);
+    }
+
+    return filtered;
+  }, [historial, selectedBus, selectedMonth]);
 
   // Datos para gráfica de rutas
-  const rutasData = React.useMemo(() => {
+  const rutasData = useMemo(() => {
     const rutaCount: Record<string, number> = {};
     filteredHistorial.forEach(h => {
       rutaCount[h.paradaNombre] = (rutaCount[h.paradaNombre] || 0) + 1;
@@ -90,12 +141,17 @@ const EstadisticasPage: React.FC = () => {
       .slice(0, 8);
   }, [filteredHistorial]);
 
-  // Datos para gráfica de ventas por MES
-  const ventasPorMes = React.useMemo(() => {
+  // Datos para gráfica de ventas por MES (histórico completo - no filtrado)
+  const ventasPorMes = useMemo(() => {
     const mesCount: Record<string, { ventas: number; ingresos: number }> = {};
-    filteredHistorial.forEach(h => {
+    
+    // Usar historial completo o filtrado por bus (pero no por mes)
+    const historialParaGrafica = selectedBus === 'all' 
+      ? historial 
+      : historial.filter(h => h.numeroBus === selectedBus);
+    
+    historialParaGrafica.forEach(h => {
       if (h.fechaSalida) {
-        // Extraer año-mes (YYYY-MM)
         const yearMonth = h.fechaSalida.substring(0, 7);
         if (!mesCount[yearMonth]) {
           mesCount[yearMonth] = { ventas: 0, ingresos: 0 };
@@ -112,18 +168,18 @@ const EstadisticasPage: React.FC = () => {
       }))
       .sort((a, b) => a.mesKey.localeCompare(b.mesKey))
       .slice(-12);
-  }, [filteredHistorial]);
+  }, [historial, selectedBus]);
 
-  // Encontrar mes más vendido
-  const mesMasVendido = React.useMemo(() => {
+  // Encontrar mes más vendido (del historial completo o filtrado por bus)
+  const mesMasVendido = useMemo(() => {
     if (ventasPorMes.length === 0) return 'N/A';
     const maxVentas = Math.max(...ventasPorMes.map(m => m.ventas));
     const mes = ventasPorMes.find(m => m.ventas === maxVentas);
     return mes ? mes.mes : 'N/A';
   }, [ventasPorMes]);
 
-  // Datos para gráfica de ventas por hora
-  const ventasPorHora = React.useMemo(() => {
+  // Datos para gráfica de ventas por hora (filtrado por mes)
+  const ventasPorHora = useMemo(() => {
     const horaCount: Record<string, number> = {};
     filteredHistorial.forEach(h => {
       if (h.horaSalida) {
@@ -135,8 +191,8 @@ const EstadisticasPage: React.FC = () => {
       .sort((a, b) => a.hora.localeCompare(b.hora));
   }, [filteredHistorial]);
 
-  // Calcular estadísticas del filtro actual
-  const currentStats = React.useMemo(() => {
+  // Calcular estadísticas del filtro actual (mes seleccionado)
+  const currentStats = useMemo(() => {
     const totalIngresos = filteredHistorial.reduce((sum, h) => sum + (h.precio || 0), 0);
     
     // Ruta más demandada
@@ -180,8 +236,8 @@ const EstadisticasPage: React.FC = () => {
     { name: 'Transferencia', value: currentStats.metodoPagoTransferencia, fill: '#940016' }
   ];
 
-  // Datos para gráfica de ganancia por bus
-  const gananciaBusData = React.useMemo(() => {
+  // Datos para gráfica de ganancia por bus (filtrado por mes)
+  const gananciaBusData = useMemo(() => {
     const busGanancia: Record<string, number> = {};
     filteredHistorial.forEach(h => {
       if (h.numeroBus) {
@@ -194,19 +250,26 @@ const EstadisticasPage: React.FC = () => {
       .slice(0, 10);
   }, [filteredHistorial]);
 
-  // Función para generar reporte completo
-  const generarReporteCompleto = async () => {
+  // Función para generar reporte mensual completo
+  const generarReporteMensual = async () => {
     setGeneratingReport(true);
     try {
-      // Preparar datos del reporte
+      const mesLabel = selectedMonth === 'current' 
+        ? getMonthName(getCurrentMonth())
+        : selectedMonth === 'all'
+        ? 'Histórico Completo'
+        : getMonthName(selectedMonth);
+
       const reportData = {
         fecha: new Date().toLocaleDateString('es-EC'),
+        mes: mesLabel,
         filtro: selectedBus === 'all' ? 'Todos los buses' : `Bus ${selectedBus}`,
         stats: currentStats,
         ventasPorMes,
         rutasData,
         ventasPorHora,
-        gananciaBusData
+        gananciaBusData,
+        historial: filteredHistorial
       };
 
       // Generar PDF
@@ -214,7 +277,7 @@ const EstadisticasPage: React.FC = () => {
       
       toast({
         title: 'Reporte generado',
-        description: 'El reporte PDF se ha descargado exitosamente',
+        description: `Reporte de ${mesLabel} descargado exitosamente`,
       });
     } catch (error) {
       console.error('Error al generar reporte:', error);
@@ -228,17 +291,35 @@ const EstadisticasPage: React.FC = () => {
     }
   };
 
-  // Función para generar reporte por bus específico
+  // Función para generar reporte por bus específico (del mes seleccionado)
   const generarReportePorBus = async (busNumero: string) => {
     setGeneratingReport(true);
     try {
-      const busHistorial = historial.filter(h => h.numeroBus === busNumero);
+      // Filtrar por bus Y mes
+      let busHistorial = historial.filter(h => h.numeroBus === busNumero);
+      
+      if (selectedMonth !== 'all') {
+        const targetMonth = selectedMonth === 'current' ? getCurrentMonth() : selectedMonth;
+        busHistorial = busHistorial.filter(h => {
+          if (!h.fechaSalida) return false;
+          const yearMonth = h.fechaSalida.substring(0, 7);
+          return yearMonth === targetMonth;
+        });
+      }
+
       const busData = buses.find(b => b.numero === busNumero);
       
+      const mesLabel = selectedMonth === 'current' 
+        ? getMonthName(getCurrentMonth())
+        : selectedMonth === 'all'
+        ? 'Histórico'
+        : getMonthName(selectedMonth);
+
       const reportData = {
         bus: busNumero,
         placa: busData?.ruta || 'N/A',
         chofer: busData?.chofer || 'N/A',
+        mes: mesLabel,
         totalVentas: busHistorial.length,
         totalIngresos: busHistorial.reduce((sum, h) => sum + (h.precio || 0), 0),
         historial: busHistorial
@@ -249,7 +330,7 @@ const EstadisticasPage: React.FC = () => {
       
       toast({
         title: 'Reporte generado',
-        description: `Reporte del Bus ${busNumero} descargado exitosamente`,
+        description: `Reporte del Bus ${busNumero} - ${mesLabel} descargado exitosamente`,
       });
     } catch (error) {
       console.error('Error al generar reporte por bus:', error);
@@ -263,19 +344,53 @@ const EstadisticasPage: React.FC = () => {
     }
   };
 
+  // Etiqueta del período seleccionado
+  const periodoLabel = useMemo(() => {
+    if (selectedMonth === 'all') return 'Histórico Completo';
+    if (selectedMonth === 'current') return getMonthName(getCurrentMonth());
+    return getMonthName(selectedMonth);
+  }, [selectedMonth]);
+
   return (
     <MainLayout>
       <PageHeader
         title="Estadísticas"
-        description="Análisis detallado basado en el historial de ventas"
+        description={`Análisis detallado - ${periodoLabel}`}
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {/* Filtro de mes */}
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filtrar por mes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="current">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Mes Actual
+                  </div>
+                </SelectItem>
+                <SelectItem value="all">Histórico Completo</SelectItem>
+                {mesesDisponibles.map(mes => (
+                  <SelectItem key={mes.value} value={mes.value}>
+                    {mes.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Filtro de bus */}
             <Select value={selectedBus} onValueChange={setSelectedBus}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Filtrar por bus" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los buses</SelectItem>
+                <SelectItem value="all">
+                  <div className="flex items-center gap-2">
+                    <Bus className="h-4 w-4" />
+                    Todos los buses
+                  </div>
+                </SelectItem>
                 {buses.map(bus => (
                   <SelectItem key={bus.id} value={bus.numero}>
                     Bus {bus.numero} - {bus.ruta}
@@ -296,7 +411,7 @@ const EstadisticasPage: React.FC = () => {
 
             <Button 
               size="sm"
-              onClick={generarReporteCompleto}
+              onClick={generarReporteMensual}
               disabled={generatingReport}
               className="bg-[#940016] hover:bg-[#B8001F]"
             >
@@ -307,12 +422,25 @@ const EstadisticasPage: React.FC = () => {
         }
       />
 
+      {/* Badge informativo del período */}
+      <div className="mb-6">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#940016]/10 to-[#940016]/5 border border-[#940016]/20 rounded-lg">
+          <Filter className="h-4 w-4 text-[#940016]" />
+          <span className="text-sm font-medium">
+            Mostrando datos de: <span className="font-bold text-[#940016]">{periodoLabel}</span>
+            {selectedBus !== 'all' && ` - Bus ${selectedBus}`}
+          </span>
+        </div>
+      </div>
+
       {/* KPIs principales */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-        <div className="rounded-xl border bg-gradient-to-br from-success/10 to-success/5 p-6">
+        <div className="rounded-xl border bg-gradient-to-br from-success/10 to-success/5 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Ingresos Totales</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Ingresos {selectedMonth === 'current' ? 'del Mes' : selectedMonth === 'all' ? 'Totales' : 'del Período'}
+              </p>
               <p className="text-2xl font-bold mt-1">{formatCurrency(currentStats.totalIngresos)}</p>
               <p className="text-xs text-muted-foreground mt-1">{currentStats.totalVentas} transacciones</p>
             </div>
@@ -322,7 +450,7 @@ const EstadisticasPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="rounded-xl border bg-gradient-to-br from-primary/10 to-primary/5 p-6">
+        <div className="rounded-xl border bg-gradient-to-br from-primary/10 to-primary/5 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Ruta Más Demandada</p>
@@ -335,19 +463,19 @@ const EstadisticasPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="rounded-xl border bg-gradient-to-br from-[#940016]/10 to-[#940016]/5 p-6">
+        <div className="rounded-xl border bg-gradient-to-br from-[#940016]/10 to-[#940016]/5 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Mes Más Vendido</p>
+              <p className="text-sm font-medium text-muted-foreground">Mes Más Vendido (Histórico)</p>
               <p className="text-lg font-bold mt-1">{mesMasVendido}</p>
             </div>
             <div className="h-12 w-12 rounded-xl bg-[#940016]/20 flex items-center justify-center">
-              <Calendar className="h-6 w-6 text-[#940016]" />
+              <TrendingUp className="h-6 w-6 text-[#940016]" />
             </div>
           </div>
         </div>
 
-        <div className="rounded-xl border bg-gradient-to-br from-accent/10 to-accent/5 p-6">
+        <div className="rounded-xl border bg-gradient-to-br from-accent/10 to-accent/5 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Hora Más Vendida</p>
@@ -362,12 +490,12 @@ const EstadisticasPage: React.FC = () => {
 
       {/* Gráficas de ventas por mes y hora */}
       <div className="grid gap-6 lg:grid-cols-2 mb-6">
-        {/* Ventas e ingresos por MES */}
-        <div className="rounded-xl border bg-card p-6">
+        {/* Ventas e ingresos por MES (histórico) */}
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <Calendar className="h-5 w-5 text-[#940016]" />
-              Ventas por Mes
+              Evolución Mensual (Histórico)
             </h3>
           </div>
           <div className="h-72">
@@ -425,11 +553,11 @@ const EstadisticasPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Ventas por hora */}
-        <div className="rounded-xl border bg-card p-6">
+        {/* Ventas por hora (del período seleccionado) */}
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Clock className="h-5 w-5 text-warning" />
-            Ventas por Hora
+            Ventas por Hora ({periodoLabel})
           </h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -462,10 +590,10 @@ const EstadisticasPage: React.FC = () => {
       {/* Rutas más demandadas y métodos de pago */}
       <div className="grid gap-6 lg:grid-cols-2 mb-6">
         {/* Rutas más demandadas */}
-        <div className="rounded-xl border bg-card p-6">
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <MapPin className="h-5 w-5 text-[#940016]" />
-            Rutas Más Demandadas
+            Rutas Más Demandadas ({periodoLabel})
           </h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -492,10 +620,10 @@ const EstadisticasPage: React.FC = () => {
         </div>
 
         {/* Métodos de pago */}
-        <div className="rounded-xl border bg-card p-6">
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <CreditCard className="h-5 w-5 text-success" />
-            Métodos de Pago
+            Métodos de Pago ({periodoLabel})
           </h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -533,11 +661,11 @@ const EstadisticasPage: React.FC = () => {
       </div>
 
       {/* Ganancia por bus con botones de reporte individual */}
-      <div className="rounded-xl border bg-card p-6">
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Bus className="h-5 w-5 text-[#940016]" />
-            Ganancia por Bus
+            Ganancia por Bus ({periodoLabel})
           </h3>
           <p className="text-sm text-muted-foreground">
             Haz clic en una barra para generar reporte individual
@@ -588,7 +716,7 @@ const EstadisticasPage: React.FC = () => {
               size="sm"
               onClick={() => generarReportePorBus(busData.bus)}
               disabled={generatingReport}
-              className="flex items-center justify-between gap-2"
+              className="flex items-center justify-between gap-2 hover:bg-[#940016]/5 transition-colors"
             >
               <div className="flex items-center gap-2">
                 <div 
