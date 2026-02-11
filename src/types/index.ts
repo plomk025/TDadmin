@@ -12,7 +12,7 @@ export interface UsuarioRegistrado {
   rol: 'administrador' | 'usuario' | 'conductor';
   telefono?: string;
   fechaRegistro?: Timestamp | Date;
-  ultimoAcceso?: Timestamp | Date;
+  ultimaDesconexion?: Timestamp | Date;
   createdAt?: Timestamp | Date;
   lastLogin?: Timestamp | Date;
   photoURL?: string | null;
@@ -28,6 +28,7 @@ export interface User {
   createdAt: Timestamp | Date;
   lastLogin?: Timestamp | Date | null;
   photoURL?: string | null;
+  
 }
 
 // Bus (para buses_la_esperanza_salida y buses_tulcan_salida)
@@ -58,11 +59,22 @@ export interface Encomienda {
   estado: 'pendiente' | 'en_transito' | 'entregado';
   numero: string;
   remitente?: string;
-  destinatario?: string;
+  destinatario?: Destinatario; // 👈 objeto
   observaciones?: string;
   precio?: number;
   createdAt?: Timestamp | Date;
 }
+
+export interface Destinatario {
+  nombre: string;
+  cedula: string;
+  telefono: string;
+  ciudad: string;
+  direccion: string;
+  correo?: string;
+  referencia?: string;
+}
+
 
 // Historial de ventas (el más importante)
 export interface Historial {
