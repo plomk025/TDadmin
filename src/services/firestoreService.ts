@@ -163,7 +163,7 @@ export const updateLastLogin = async (uid: string): Promise<void> => {
  * Obtener usuarios por rol
  */
 export const getUsersByRole = async (
-  rol: 'administrador' | 'conductor' | 'usuario'
+  rol: 'administrador' | 'conductor' | 'usuario' |'gerente'
 ): Promise<User[]> => {
   try {
     const usersRef = collection(db, USERS_COLLECTION);
@@ -179,9 +179,9 @@ export const getUsersByRole = async (
       const data = doc.data();
       const userRol = data.rol || 'usuario';
       // Asegurar que el rol sea uno de los valores válidos
-      const validRol: 'administrador' | 'conductor' | 'usuario' = 
-        ['administrador', 'conductor', 'usuario'].includes(userRol) 
-          ? userRol as 'administrador' | 'conductor' | 'usuario'
+      const validRol: 'administrador' | 'conductor' | 'usuario'|'gerente' = 
+        ['administrador', 'conductor', 'usuario','gerente'].includes(userRol) 
+          ? userRol as 'administrador' | 'conductor' | 'usuario'|'gerente'
           : 'usuario';
       
       users.push({
@@ -214,6 +214,7 @@ export const getUserStats = async () => {
       administradores: users.filter(u => u.rol === 'administrador').length,
       conductores: users.filter(u => u.rol === 'conductor').length,
       usuarios: users.filter(u => u.rol === 'usuario').length,
+      gerente: users.filter(u => u.rol === 'gerente').length,
       activos: users.filter(u => {
         if (!u.lastLogin) return false;
         const lastLogin = u.lastLogin instanceof Date 

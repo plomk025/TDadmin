@@ -136,7 +136,7 @@ const Sidebar: React.FC = () => {
                   {isAdmin ? (
                     <span className="inline-flex items-center gap-1 text-xs font-medium text-[#940016]">
                       <div className="h-1.5 w-1.5 rounded-full bg-[#940016]" />
-                      Administrador
+                      Gerente
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500">

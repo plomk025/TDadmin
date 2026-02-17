@@ -46,7 +46,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-const COLORS = ['#940016', '#B8001F', '#6B0010', '#D4001D', '#8B0014', '#A8001A'];
+const COLORS = ['#007694', '#6500b8', '#006b1b', '#5fd400', '#15008b', '#0073a8'];
 
 const MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -503,8 +503,8 @@ const EstadisticasPage: React.FC = () => {
               <AreaChart data={ventasPorMes}>
                 <defs>
                   <linearGradient id="colorVentas" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#940016" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#940016" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#2c0094" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#2c0094" stopOpacity={0}/>
                   </linearGradient>
                   <linearGradient id="colorIngresos" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
@@ -535,7 +535,7 @@ const EstadisticasPage: React.FC = () => {
                 <Area 
                   type="monotone" 
                   dataKey="ventas" 
-                  stroke="#940016" 
+                  stroke="#000f94" 
                   fillOpacity={1} 
                   fill="url(#colorVentas)" 
                   name="ventas"
@@ -613,7 +613,7 @@ const EstadisticasPage: React.FC = () => {
                     borderRadius: '8px'
                   }}
                 />
-                <Bar dataKey="value" fill="#940016" radius={[0, 4, 4, 0]} name="Viajes" />
+                <Bar dataKey="value" fill="#0f0094" radius={[0, 4, 4, 0]} name="Viajes" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -693,7 +693,7 @@ const EstadisticasPage: React.FC = () => {
               />
               <Bar 
                 dataKey="ganancia" 
-                fill="#940016" 
+                fill="#007694" 
                 radius={[4, 4, 0, 0]}
                 name="Ganancia"
                 onClick={(data) => generarReportePorBus(data.bus)}

@@ -53,10 +53,10 @@ const AuthPage: React.FC = () => {
         // Verificar el rol del usuario
         const userRole = await checkUserRole(user.uid);
 
-        if (userRole === 'administrador') {
+        if (userRole === 'gerente') {
           toast({
             title: '¡Bienvenido!',
-            description: `Hola ${user.displayName || 'Administrador'}`,
+            description: `Hola ${user.displayName || 'Gerente'}, has iniciado sesión exitosamente.`,
           });
           navigate(from, { replace: true });
         } else {

@@ -42,7 +42,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   // Verificar si es administrador
-  const isAdmin = user?.rol === 'administrador';
+  const isAdmin = user?.rol === 'gerente';
 
   // Función para obtener datos del usuario desde Firestore
   const getUserData = async (fbUser: FirebaseUser): Promise<User | null> => {

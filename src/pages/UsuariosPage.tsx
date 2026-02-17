@@ -31,7 +31,7 @@ const UsuariosPage: React.FC = () => {
   const [users, setUsers] = useState<UsuarioRegistrado[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<UsuarioRegistrado | null>(null);
-  const [newRole, setNewRole] = useState<'administrador' | 'conductor' | 'usuario'>('usuario');
+  const [newRole, setNewRole] = useState<'administrador'|'gerente' | 'conductor' | 'usuario'>('usuario');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
 
@@ -63,7 +63,7 @@ const UsuariosPage: React.FC = () => {
 
   const handleOpenEditDialog = (user: UsuarioRegistrado) => {
     setEditingUser(user);
-    setNewRole(user.rol as 'administrador' | 'conductor' | 'usuario');
+    setNewRole(user.rol as 'administrador' | 'conductor' | 'usuario'|'gerente');
     setIsDialogOpen(true);
   };
 
@@ -93,6 +93,13 @@ const UsuariosPage: React.FC = () => {
 
   const getRoleBadge = (rol: string) => {
     switch (rol) {
+      case 'gerente':
+        return {
+          variant: 'default' as const,
+          icon: Shield,
+          label: 'Gerente',
+          color: 'bg-green-500/10 text-green-500'
+        };
       case 'administrador':
         return {
           variant: 'default' as const,
@@ -226,6 +233,7 @@ const UsuariosPage: React.FC = () => {
   const adminCount = users.filter(u => u.rol === 'administrador').length;
   const conductorCount = users.filter(u => u.rol === 'conductor').length;
   const userCount = users.filter(u => u.rol === 'usuario').length;
+  
   const conectadosCount = users.filter(u => u.estado === 'conectado').length;
 
   return (
@@ -331,7 +339,7 @@ const UsuariosPage: React.FC = () => {
                 <label className="text-sm font-medium">Seleccionar Rol</label>
                 <Select 
                   value={newRole} 
-                  onValueChange={(value) => setNewRole(value as 'administrador' | 'conductor' | 'usuario')}
+                  onValueChange={(value) => setNewRole(value as 'administrador' | 'conductor' | 'usuario'|'gerente')}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecciona un rol" />
@@ -348,6 +356,7 @@ const UsuariosPage: React.FC = () => {
                         <Truck className="h-4 w-4" />
                         <span>Conductor</span>
                       </div>
+                     
                     </SelectItem>
                     <SelectItem value="administrador">
                       <div className="flex items-center gap-2">
@@ -355,6 +364,13 @@ const UsuariosPage: React.FC = () => {
                         <span>Administrador</span>
                       </div>
                     </SelectItem>
+
+                      <SelectItem value="gerente">
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-4 w-4" />
+                        <span>Gerente</span>
+                      </div>
+                      </SelectItem>
                   </SelectContent>
                 </Select>
               </div>

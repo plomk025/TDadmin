@@ -9,7 +9,7 @@ export interface UsuarioRegistrado {
   nombre?: string;
   email: string;
   estado: 'conectado' | 'desconectado';
-  rol: 'administrador' | 'usuario' | 'conductor';
+  rol: 'administrador' | 'usuario' | 'conductor'|'gerente';
   telefono?: string;
   fechaRegistro?: Timestamp | Date;
   ultimaDesconexion?: Timestamp | Date;
@@ -24,7 +24,7 @@ export interface User {
   uid: string;
   email: string;
   displayName?: string | null;
-  rol: 'usuario' | 'administrador' | 'conductor';
+  rol: 'usuario' | 'administrador' | 'conductor'|'gerente';
   createdAt: Timestamp | Date;
   lastLogin?: Timestamp | Date | null;
   photoURL?: string | null;
